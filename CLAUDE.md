@@ -45,6 +45,9 @@ hasn't already been scoped by Sonnet 5, structured by Linear, and planned by Fab
    writing code — and can delegate sub-tasks to other agents — instead of spending its
    budget on ideation or planning.
 
+Cross-cutting: **`docs/fable5/operating-discipline.md`** — how any agent should behave
+while it's executing, not which tool executes. It applies most directly to Step 04.
+
 ## Why this works
 
 - **Cost efficiency** — the expensive model only ever does execution.

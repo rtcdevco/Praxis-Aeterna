@@ -31,3 +31,9 @@ sub-tasks to other agents and coordinate the output if needed.
 
 Working code for the ticket(s) in scope, following the architecture Step 03 already
 decided.
+
+## Operating discipline
+
+While executing, follow `operating-discipline.md` — it's the OODA-loop discipline
+(reasoning, workflows, prompts, deliverables) for how an agent behaves moment-to-moment
+during this step.
