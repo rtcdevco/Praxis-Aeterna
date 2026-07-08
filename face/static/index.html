@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>V.A.U.L.T. — Fable 5 OS</title>
+  <link rel="stylesheet" href="/css/dashboard.css" />
+</head>
+<body>
+  <header class="vault-header">
+    <span class="vault-title">V.A.U.L.T.</span>
+    <span id="clock" class="vault-clock"></span>
+  </header>
+
+  <main class="vault-grid">
+    <section class="panel" aria-labelledby="metrics-heading">
+      <h2 id="metrics-heading">Metrics</h2>
+      <dl class="metric-list">
+        <div class="metric-row">
+          <dt>Vault Nodes</dt>
+          <dd id="metric-vault-nodes">Vault Nodes: —</dd>
+        </div>
+        <div class="metric-row">
+          <dt>Graph Links</dt>
+          <dd id="metric-graph-links">Graph Links: —</dd>
+        </div>
+        <div class="metric-row">
+          <dt>Daily Notes</dt>
+          <dd id="metric-daily-notes">Daily Notes: —</dd>
+        </div>
+        <div class="metric-row">
+          <dt>Context Usage</dt>
+          <dd id="metric-context-usage">Context Usage: —</dd>
+        </div>
+        <div class="metric-row">
+          <dt>Active Skill</dt>
+          <dd id="metric-active-skill">Active Skill: —</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="panel" aria-labelledby="voice-heading">
+      <h2 id="voice-heading">Voice</h2>
+      <p id="voice-state" class="voice-state">state: —</p>
+      <p id="voice-stt" class="voice-line">STT: —</p>
+      <p id="voice-tts" class="voice-line">TTS: —</p>
+    </section>
+
+    <section class="panel" aria-labelledby="skills-heading">
+      <h2 id="skills-heading">Skills</h2>
+      <ul id="skills-list" class="skills-list"></ul>
+    </section>
+
+    <section class="panel panel-graph" aria-labelledby="graph-heading">
+      <h2 id="graph-heading">Knowledge Graph</h2>
+      <svg id="graph-svg" width="100%" height="360"></svg>
+    </section>
+  </main>
+
+  <script src="/js/d3.min.js"></script>
+  <script src="/js/graph.js"></script>
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>

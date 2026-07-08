@@ -1,0 +1,20 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# generated at app startup, never hand-maintained
+skills_manifest.json
+
+# vault runtime content — keep the folder structure, not user notes
+vault/00-inbox/*
+vault/01-daily/*
+vault/02-projects/*
+vault/03-clients/*
+vault/04-knowledge/*
+vault/06-archive/*
+!vault/**/.gitkeep
+!vault/05-templates/
