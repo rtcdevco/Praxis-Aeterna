@@ -1,0 +1,17 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.git/
+.env
+tests/
+docs/
+skills_manifest.json
+vault/00-inbox/*
+vault/01-daily/*
+vault/02-projects/*
+vault/03-clients/*
+vault/04-knowledge/*
+vault/06-archive/*

@@ -1,0 +1,12 @@
+[Unit]
+Description=Fable 5 OS
+After=network.target
+
+[Service]
+WorkingDirectory=__DIR__
+ExecStart=__DIR__/.venv/bin/python -m uvicorn face.main:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+EnvironmentFile=__DIR__/.env
+
+[Install]
+WantedBy=multi-user.target

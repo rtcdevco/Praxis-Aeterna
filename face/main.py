@@ -12,6 +12,7 @@ from core.context_budget import ContextBudget
 from core.manifest import generate_manifest
 from core.router import SkillRouter
 from vault_connector.connector import VaultConnector
+from voice.engines import VoiceOS
 
 from .routes import graph, metrics, skills, vault, voice
 
@@ -31,6 +32,7 @@ def create_app(
     app.state.context_budget = ContextBudget(CONTEXT_TOKEN_BUDGET)
     app.state.active_skill = None
     app.state.last_context_package = None
+    app.state.voice = VoiceOS()
 
     app.include_router(metrics.router, prefix="/api")
     app.include_router(skills.router, prefix="/api")

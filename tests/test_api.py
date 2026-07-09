@@ -57,11 +57,27 @@ def test_skills_list(client):
     assert response.json() == {"skills": ["productivity"]}
 
 
-def test_voice_status_stub(client):
+def test_voice_status_unavailable_without_deps(client):
     response = client.get("/api/voice/status")
     body = response.json()
     assert body["stt"] == "unavailable"
     assert body["tts"] == "unavailable"
+    assert body["state"] == "idle"
+
+
+def test_voice_transcribe_without_deps_returns_clear_error(client):
+    response = client.post(
+        "/api/voice/transcribe",
+        files={"file": ("clip.wav", b"not-real-audio", "audio/wav")},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"text": "", "error": "faster-whisper not installed"}
+
+
+def test_voice_synthesize_without_deps_returns_clear_error(client):
+    response = client.post("/api/voice/synthesize", json={"text": "hello there"})
+    assert response.status_code == 200
+    assert response.json() == {"path": None, "error": "kokoro-onnx not installed"}
 
 
 def test_route_utterance_updates_active_skill_and_metrics(client):
