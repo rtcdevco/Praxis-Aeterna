@@ -32,7 +32,9 @@ def client(tmp_path):
 
     manifest_path = tmp_path / "skills_manifest.json"
 
-    app = create_app(vault_dir=vault_dir, skills_dir=skills_dir, manifest_path=manifest_path)
+    app = create_app(
+        vault_dir=vault_dir, skills_dir=skills_dir, manifest_path=manifest_path, anthropic_client=None
+    )
     return TestClient(app)
 
 
@@ -66,7 +68,7 @@ def test_voice_status_stub(client):
 
 def test_route_utterance_updates_active_skill_and_metrics(client):
     response = client.post("/api/skills/route", json={"utterance": "add a task"})
-    assert response.json() == {"matched_skill": "productivity"}
+    assert response.json() == {"matched_skill": "productivity", "routing_method": "deterministic"}
 
     metrics = client.get("/api/metrics").json()
     assert metrics["active_skill"] == "productivity"
@@ -75,7 +77,26 @@ def test_route_utterance_updates_active_skill_and_metrics(client):
 
 def test_route_utterance_no_match(client):
     response = client.post("/api/skills/route", json={"utterance": "completely unrelated"})
-    assert response.json() == {"matched_skill": None}
+    assert response.json() == {"matched_skill": None, "routing_method": "none"}
+
+
+def test_execute_utterance_without_llm_configured_returns_503(client):
+    response = client.post("/api/skills/execute", json={"utterance": "add a task"})
+    assert response.status_code == 503
+    assert response.json()["detail"]["error"] == "llm_not_configured"
+
+
+def test_execute_utterance_no_match_returns_empty_without_error(client):
+    response = client.post("/api/skills/execute", json={"utterance": "completely unrelated"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body == {
+        "matched_skill": None,
+        "routing_method": "none",
+        "response": None,
+        "usage": None,
+        "saved_to_vault": None,
+    }
 
 
 def test_save_note_then_appears_in_metrics_and_search(client):

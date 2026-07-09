@@ -7,6 +7,7 @@ renders the actual seeded numbers.
 from __future__ import annotations
 
 import multiprocessing
+import os
 import socket
 import time
 import urllib.request
@@ -14,7 +15,11 @@ import urllib.request
 import pytest
 from playwright.sync_api import sync_playwright
 
-CHROMIUM_PATH = "/opt/pw-browsers/chromium"
+# This sandbox pre-installs Chromium at a fixed path; CI environments (and
+# anyone else running this suite) rely on Playwright's own managed browser
+# instead, so fall back to that when the sandbox path doesn't exist.
+_SANDBOX_CHROMIUM_PATH = "/opt/pw-browsers/chromium"
+CHROMIUM_PATH = _SANDBOX_CHROMIUM_PATH if os.path.exists(_SANDBOX_CHROMIUM_PATH) else None
 
 
 def _free_port() -> int:
@@ -110,6 +115,13 @@ def test_dashboard_renders_seeded_metrics(seeded_server):
 
             page.wait_for_function(
                 "document.getElementById('metric-vault-nodes').textContent.includes('Vault Nodes: 3')",
+                timeout=10000,
+            )
+            # dashboard.js fetches skills/voice/graph concurrently with metrics
+            # on each poll tick — wait for that fetch to land too, rather than
+            # racing it right after the metrics assertion above.
+            page.wait_for_function(
+                "document.getElementById('skills-list').textContent.includes('productivity')",
                 timeout=10000,
             )
 
