@@ -53,10 +53,16 @@ pip install -r requirements.txt
 
 # Optional — without this, skill execution returns 503 and routing falls
 # back to keyword-matching only (no LLM in the loop).
-export ANTHROPIC_API_KEY=sk-ant-...
+cp .env.example .env
+# then edit .env and set ANTHROPIC_API_KEY
 
 uvicorn face.main:app --reload
 ```
+
+`.env` is loaded automatically (via `config/settings.py`) and is gitignored, so
+your key never gets committed. A real environment variable always wins over
+`.env` if both are set — handy for CI/production, where secrets come from the
+platform rather than a file.
 
 Then open http://127.0.0.1:8000 for the V.A.U.L.T. dashboard.
 

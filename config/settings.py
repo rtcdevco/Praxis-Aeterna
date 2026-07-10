@@ -3,7 +3,15 @@
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+# Load a local .env (if present) before reading any environment variables
+# below — e.g. ANTHROPIC_API_KEY. Never overrides a variable already set in
+# the real environment (load_dotenv's default), so this is safe in CI/prod
+# where secrets come from the platform instead of a file.
+load_dotenv(REPO_ROOT / ".env")
 
 VAULT_DIR = REPO_ROOT / "vault"
 SKILLS_DIR = REPO_ROOT / "skills"
