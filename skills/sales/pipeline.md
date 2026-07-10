@@ -1,0 +1,7 @@
+# Pipeline
+
+## Open
+
+## Won
+
+## Lost

@@ -10,7 +10,10 @@ cleverly repack around a gap).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
+
+if TYPE_CHECKING:
+    import anthropic
 
 
 class TokenCounter(Protocol):
@@ -20,17 +23,42 @@ class TokenCounter(Protocol):
 class HeuristicTokenCounter:
     """A documented ~4-chars-per-token estimate for English prose.
 
-    This is NOT Claude's real tokenizer. It exists because this phase makes no
-    live Claude API calls to count against, and `tiktoken` would be the wrong
-    tokenizer for Claude content (it under-counts relative to Claude's actual
-    tokenizer). Swap point for a future phase that makes live model calls:
-    implement a `TokenCounter` backed by `client.messages.count_tokens(...)`
-    (the real Anthropic endpoint) — callers only depend on this Protocol, so
-    no other code needs to change.
+    This is NOT Claude's real tokenizer. It remains the default for
+    `app.state.context_budget` (used by `/api/metrics` and the deterministic
+    `/api/skills/route` path) so routing stays the zero-network-call operation
+    it's documented and tested as. `/api/skills/execute` builds a real-counting
+    `ContextBudget` (see `AnthropicTokenCounter` below) right before the paid
+    model call, where getting the count right actually matters.
     """
 
     def count_tokens(self, text: str) -> int:
         return len(text) // 4 + 1
+
+
+class AnthropicTokenCounter:
+    """Live TokenCounter backed by client.messages.count_tokens(...).
+
+    Falls back to a HeuristicTokenCounter for a single call if the API call
+    itself fails (network blip, transient error) — assemble() must never
+    raise because of a counting failure.
+    """
+
+    def __init__(self, client: "anthropic.Anthropic", model: str):
+        self._client = client
+        self._model = model
+        self._fallback = HeuristicTokenCounter()
+
+    def count_tokens(self, text: str) -> int:
+        import anthropic
+
+        try:
+            response = self._client.messages.count_tokens(
+                model=self._model,
+                messages=[{"role": "user", "content": text}],
+            )
+            return response.input_tokens
+        except anthropic.APIError:
+            return self._fallback.count_tokens(text)
 
 
 @dataclass

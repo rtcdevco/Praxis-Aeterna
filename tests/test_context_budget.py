@@ -1,4 +1,9 @@
-from core.context_budget import ContextBudget, HeuristicTokenCounter
+import httpx
+from anthropic import APIStatusError
+
+from core.context_budget import AnthropicTokenCounter, ContextBudget, HeuristicTokenCounter
+
+from ._fake_anthropic import FakeAnthropicClient
 
 
 class FixedLengthCounter:
@@ -54,3 +59,30 @@ def test_usage_ratio():
     budget = ContextBudget(max_tokens=20, counter=FixedLengthCounter())
     package = budget.assemble("x" * 10, [])
     assert package.usage_ratio == 0.5
+
+
+def test_anthropic_token_counter_calls_count_tokens_with_expected_shape():
+    client = FakeAnthropicClient(count_tokens_fn=lambda text: 42)
+    counter = AnthropicTokenCounter(client, "claude-haiku-4-5")
+
+    assert counter.count_tokens("hello world") == 42
+    call = client.messages.count_token_calls[0]
+    assert call["model"] == "claude-haiku-4-5"
+    assert call["messages"] == [{"role": "user", "content": "hello world"}]
+
+
+def test_anthropic_token_counter_falls_back_to_heuristic_on_api_error():
+    request = httpx.Request("POST", "https://api.anthropic.com/v1/messages/count_tokens")
+    response = httpx.Response(500, request=request)
+
+    class FailingMessages:
+        def count_tokens(self, **kwargs):
+            raise APIStatusError("boom", response=response, body=None)
+
+    class FailingClient:
+        messages = FailingMessages()
+
+    counter = AnthropicTokenCounter(FailingClient(), "claude-haiku-4-5")
+    heuristic = HeuristicTokenCounter()
+
+    assert counter.count_tokens("some text") == heuristic.count_tokens("some text")
