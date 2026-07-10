@@ -19,6 +19,15 @@ MANIFEST_PATH = REPO_ROOT / "skills_manifest.json"
 # Conservative token budget per active-skill context package (see core/context_budget.py).
 CONTEXT_TOKEN_BUDGET = 8000
 
+# Observability (see observability/) — SQLite store for metrics, incidents,
+# health history, and the version audit log.
+OBSERVABILITY_DB_PATH = Path(
+    os.environ.get("OBSERVABILITY_DB_PATH", str(REPO_ROOT / "observability_data.db"))
+)
+METRICS_RETENTION_DAYS = int(os.environ.get("METRICS_RETENTION_DAYS", "30"))
+DRIFT_SIGMA_THRESHOLD = float(os.environ.get("DRIFT_SIGMA_THRESHOLD", "2.0"))
+REPAIR_CONSECUTIVE_THRESHOLD = int(os.environ.get("REPAIR_CONSECUTIVE_THRESHOLD", "3"))
+
 # Read at import time so failures surface immediately in logs, but never raised
 # here: nothing in Phase 1/2 calls the Anthropic API yet, so a missing key
 # shouldn't break app startup. Callers that actually need it call

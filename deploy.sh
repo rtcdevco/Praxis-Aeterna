@@ -9,8 +9,13 @@ case "$MODE" in
     ;;
   docker)
     docker build -t fable5-os .
+    # observability_data.db is mounted (not baked into the image) so metrics,
+    # incidents, and the audit log survive container restarts. Must exist as
+    # a file before the mount, or Docker creates a directory there instead.
+    touch "$PWD/observability_data.db"
     exec docker run --rm -p 8000:8000 --env-file .env \
-      -v "$PWD/vault:/app/vault" -v "$PWD/skills:/app/skills" fable5-os
+      -v "$PWD/vault:/app/vault" -v "$PWD/skills:/app/skills" \
+      -v "$PWD/observability_data.db:/app/observability_data.db" fable5-os
     ;;
   systemd)
     if [ "$(id -u)" -eq 0 ]; then

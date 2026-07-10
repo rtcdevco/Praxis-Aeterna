@@ -29,8 +29,12 @@ def _run_server(vault_dir: str, skills_dir: str, manifest_path: str, port: int) 
     from face.main import create_app
     from pathlib import Path
 
+    observability_db_path = Path(manifest_path).parent / "observability.db"
     app = create_app(
-        vault_dir=Path(vault_dir), skills_dir=Path(skills_dir), manifest_path=Path(manifest_path)
+        vault_dir=Path(vault_dir),
+        skills_dir=Path(skills_dir),
+        manifest_path=Path(manifest_path),
+        observability_db_path=observability_db_path,
     )
     uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
 
@@ -110,6 +114,14 @@ def test_dashboard_renders_seeded_metrics(seeded_server):
 
             page.wait_for_function(
                 "document.getElementById('metric-vault-nodes').textContent.includes('Vault Nodes: 3')",
+                timeout=10000,
+            )
+            # refreshSkills() and refreshMetrics() run concurrently in
+            # refreshAll(), so the vault-nodes wait above doesn't guarantee
+            # skills-list has rendered yet — wait for it explicitly too,
+            # rather than relying on both resolving in the same tick.
+            page.wait_for_function(
+                "document.getElementById('skills-list').textContent.includes('productivity')",
                 timeout=10000,
             )
 
