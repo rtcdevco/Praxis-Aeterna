@@ -6,6 +6,9 @@ venv/
 .pytest_cache/
 .ruff_cache/
 
+# real secrets — .env.example is the only variant tracked
+.env
+
 # generated at app startup, never hand-maintained
 skills_manifest.json
 

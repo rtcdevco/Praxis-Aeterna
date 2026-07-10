@@ -116,6 +116,15 @@ def test_dashboard_renders_seeded_metrics(seeded_server):
             assert "Graph Links: 2" in page.locator("#metric-graph-links").text_content()
             assert "productivity" in page.locator("#skills-list").text_content()
 
+            # Real (not stubbed) voice status: no voice deps installed in this
+            # environment, so both engines correctly report unavailable.
+            page.wait_for_function(
+                "document.getElementById('voice-stt').textContent.includes('STT: unavailable')",
+                timeout=10000,
+            )
+            assert "TTS: unavailable" in page.locator("#voice-tts").text_content()
+            assert "state: idle" in page.locator("#voice-state").text_content()
+
             # The graph SVG should have rendered 3 circle nodes via D3.
             page.wait_for_function(
                 "document.querySelectorAll('#graph-svg circle.graph-node').length === 3",
