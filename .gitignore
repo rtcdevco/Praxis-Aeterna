@@ -11,6 +11,7 @@ venv/
 
 # generated at app startup, never hand-maintained
 skills_manifest.json
+observability_data.db
 
 # vault runtime content — keep the folder structure, not user notes
 vault/00-inbox/*

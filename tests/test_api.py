@@ -31,8 +31,14 @@ def client(tmp_path):
     _write_skill(skills_dir, "productivity", patterns=[r"\\btask\\b"], keywords=["task", "todo"])
 
     manifest_path = tmp_path / "skills_manifest.json"
+    observability_db_path = tmp_path / "observability.db"
 
-    app = create_app(vault_dir=vault_dir, skills_dir=skills_dir, manifest_path=manifest_path)
+    app = create_app(
+        vault_dir=vault_dir,
+        skills_dir=skills_dir,
+        manifest_path=manifest_path,
+        observability_db_path=observability_db_path,
+    )
     return TestClient(app)
 
 
@@ -124,3 +130,73 @@ def test_graph_reflects_saved_notes_with_links(client):
     assert graph["edges"] == [
         {"source": "04-knowledge/note-a.md", "target": "04-knowledge/note-b.md"}
     ]
+
+
+def test_observability_metrics_prometheus_format(client):
+    client.get("/api/skills")  # generate at least one recorded request
+    response = client.get("/api/observability/metrics")
+    assert response.status_code == 200
+    assert "fable5_requests_total" in response.text
+    assert "# TYPE fable5_requests_total counter" in response.text
+
+
+def test_health_score_all_healthy_by_default(client):
+    response = client.get("/api/health/score")
+    body = response.json()
+    assert body["score"] == 1.0
+    assert body["components"]["brain"]["healthy"] is True
+    assert body["components"]["memory"]["healthy"] is True
+    assert body["components"]["face"]["healthy"] is True
+    assert body["components"]["voice"]["healthy"] is True
+    assert body["components"]["handoff"]["healthy"] is True
+    assert body["repair"] is None
+
+
+def test_observability_incidents_empty_with_little_traffic(client):
+    response = client.get("/api/observability/incidents")
+    assert response.json() == {"incidents": []}
+
+
+def test_audit_log_empty_by_default(client):
+    response = client.get("/api/audit/log")
+    assert response.json() == {"entries": []}
+
+
+def test_health_score_repairs_after_declining_trend(client):
+    app_state = client.app.state
+
+    baseline = client.get("/api/health/score").json()
+    assert baseline["score"] == 1.0
+
+    # Break the vault so `memory` reports unhealthy, then break voice too —
+    # two successive checks with a strictly worsening score.
+    real_scan = app_state.vault.scan_vault
+
+    def flaky_scan(force_rescan=False):
+        if force_rescan:
+            app_state.vault.scan_vault = real_scan  # simulate the repair "fixing" it
+            return real_scan(force_rescan=force_rescan)
+        raise RuntimeError("simulated vault failure")
+
+    app_state.vault.scan_vault = flaky_scan
+    second = client.get("/api/health/score").json()
+    assert second["components"]["memory"]["healthy"] is False
+    assert second["score"] == pytest.approx(0.8)
+
+    app_state.voice.status = lambda: (_ for _ in ()).throw(RuntimeError("voice down"))
+    third = client.get("/api/health/score").json()
+
+    assert third["repair"] is not None
+    assert third["repair"]["component"] == "memory"
+    assert third["repair"]["score_before"] == pytest.approx(0.6)
+    # Memory got fixed by the repair action; voice is still broken (untouched),
+    # so the post-repair score reflects partial recovery, not a full fix. The
+    # top-level `score` is computed fresh *after* repair runs, so it matches
+    # score_after rather than the pre-repair score that triggered it.
+    assert third["repair"]["score_after"] == pytest.approx(0.8)
+    assert third["score"] == pytest.approx(0.8)
+    assert third["components"]["memory"]["healthy"] is True
+    assert third["components"]["voice"]["healthy"] is False
+
+    audit_after = client.get("/api/audit/log").json()
+    assert audit_after == {"entries": []}  # repair doesn't touch the version-audit log
