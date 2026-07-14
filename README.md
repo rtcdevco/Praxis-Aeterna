@@ -17,38 +17,54 @@ Linear structures it, Fable 5 plans it, Opus-tier agents build it.
 
 Voice and Handoff are now built, but two things inside them still need a real
 environment to verify, not this sandbox:
-- **Voice**: `voice/engines.py` and its API wiring are fully unit-tested with
-  mocked STT/TTS deps, but installing the real `faster-whisper`/`kokoro-onnx`
-  packages and downloading model files needs real network access and hardware
-  — see `requirements-voice.txt` and Linear ticket PRA-6.
+- **Voice**: every module (`stt_engine.py`, `tts_engine.py`, `audio_capture.py`,
+  `audio_playback.py`, `intent_router.py`, `wake_word.py`, `voice_os.py`) and
+  its API wiring are fully unit-tested with mocked STT/TTS/`sounddevice` deps,
+  but installing the real packages, downloading model files, and testing
+  against a real mic/speakers needs real network access and hardware — see
+  `requirements-voice.txt`.
 - **Handoff**: `./deploy.sh local` is verified end-to-end (boots the real app,
   serves the dashboard and voice endpoints). The `docker` and `systemd` modes
   are written and match the actual current entrypoint (`face.main:app`), but
   need a host with Docker / a real init system + sudo to verify — this
-  sandbox container has neither. See Linear tickets PRA-7/8/11.
+  sandbox container has neither.
 
 ## What's here
 
 - **`core/`** — skill discovery + manifest generation, a two-phase
-  (regex-then-keyword) intent router, and a token-budget-aware context
-  assembler.
+  (regex-then-keyword) intent router, a token-budget-aware context assembler,
+  and per-session tracking (`session.py` for lifecycle, `context_manager.py`
+  for active-skill/context-package state) — currently backing one implicit
+  "default" session, but the primitives support more.
 - **`vault_connector/`** — reads/writes the `vault/` directory (plain Markdown
   + `[[wikilinks]]`, no database): scanning, saving notes, scored search, a
   wikilink knowledge graph, and daily-note templating.
 - **`face/`** — a FastAPI backend and a static (no-build-step) dashboard that
   polls it, showing live metrics, the skill list, voice status, and a
   D3 force-directed graph of the vault.
-- **`skills/`** — starter skills (`productivity`, `research`), each a
-  self-contained folder with a `SKILL.md` definition.
+- **`skills/`** — `productivity`, `research`, `content`, `sales`, `finance`,
+  `ops`, each a self-contained folder with a `SKILL.md` definition following
+  the same Identity/Context Files/Capabilities/Output Format/Rules/Vault Save
+  template.
 - **`vault/`** — the Obsidian-compatible data directory (`00-inbox` through
   `06-archive`); most subfolders are gitignored at the content level so your
   own notes don't get committed, only the structure does.
-- **`voice/`** — `STTEngine` (faster-whisper) and `TTSEngine` (Kokoro ONNX),
-  both optional at import time; a `VoiceOS` facade the API layer talks to.
+- **`voice/`** — one module per pipeline stage: `stt_engine.py`
+  (faster-whisper), `tts_engine.py` (Kokoro ONNX), `audio_capture.py` (mic +
+  RMS-energy VAD), `audio_playback.py` (speaker output), `intent_router.py`
+  (routes a transcript through the same `SkillRouter` a typed utterance uses,
+  plus wake-phrase stripping), `wake_word.py` (wake-phrase detection by
+  reusing `STTEngine` rather than a separate proprietary keyword-spotting
+  dependency), and `voice_os.py` (the `VoiceOS` facade the API layer talks
+  to). All hardware-touching pieces (`sounddevice` for capture/playback,
+  `faster-whisper`/`kokoro-onnx` for STT/TTS) are optional at import time —
+  see "Voice" below for what's actually verified vs. not.
 - **`deploy/`** — the systemd unit (`fable5.service`) and `scripts/reskin.sh`
   for cloning + rebranding the whole repo for a client.
 - **`observability/`** — metrics, drift detection, health scoring, self-repair,
   and a version audit log. See "Observability" below.
+- **`config/voice_patterns.json`** — the wake phrase and per-skill voice
+  command examples, read via `voice.intent_router.load_voice_patterns()`.
 - **`docs/fable5/`** — the methodology's step-by-step templates (unrelated to
   the product code above; describes *how* work happens in this repo).
 
@@ -65,10 +81,11 @@ uvicorn face.main:app --reload
 
 Then open http://127.0.0.1:8000 for the V.A.U.L.T. dashboard.
 
-Voice deps (`faster-whisper`, `kokoro-onnx`, `soundfile`) are optional and not
-installed above — install with `pip install -r requirements-voice.txt` if you
-want real STT/TTS instead of the graceful "unavailable" fallback; model files
-(e.g. `kokoro-v0_19.onnx`, `voices.bin`) go in `models/`.
+Voice deps (`faster-whisper`, `kokoro-onnx`, `soundfile`, `sounddevice`) are
+optional and not installed above — install with
+`pip install -r requirements-voice.txt` if you want real STT/TTS/mic/speaker
+support instead of the graceful "unavailable" fallback; model files (e.g.
+`kokoro-v0_19.onnx`, `voices.bin`) go in `models/`.
 
 ## Deploy modes
 
@@ -136,14 +153,16 @@ gets added later.
 pytest
 ```
 
-Unit tests cover the skill router, context budget, vault connector, wikilink
-graph, voice engines (STT/TTS, mocked so no real audio deps are needed),
-env-based config, and the observability modules (metrics, drift detection,
-version audit, health aggregation, repair triggering) in isolation (pure
-Python, no external services). `test_api.py` exercises every `/api/*` route
-via FastAPI's `TestClient`, including the voice endpoints' graceful-unavailable
-behavior and a full health-score-triggers-repair scenario. `tests/e2e/` drives
-a real headless-Chromium session against a seeded vault and asserts the
-dashboard renders the actual seeded numbers, including live (not stubbed)
+Unit tests cover the skill router, context budget, session/context-manager,
+vault connector, wikilink graph, the full voice pipeline (STT/TTS/audio
+capture/audio playback/intent routing/wake word, all mocked so no real audio
+deps or hardware are needed), env-based config, and the observability modules
+(metrics, drift detection, version audit, health aggregation, repair
+triggering) in isolation (pure Python, no external services). `test_api.py`
+exercises every `/api/*` route via FastAPI's `TestClient`, including the voice
+endpoints' graceful-unavailable behavior and a full health-score-triggers-repair
+scenario. `tests/e2e/` drives a real headless-Chromium session against a
+seeded vault and asserts the dashboard renders the actual seeded numbers,
+including live (not stubbed)
 voice status — proof the full stack is wired correctly, not just unit-correct
 in isolation.

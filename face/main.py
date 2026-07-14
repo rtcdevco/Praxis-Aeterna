@@ -19,15 +19,17 @@ from config.settings import (
     VAULT_DIR,
 )
 from core.context_budget import ContextBudget
+from core.context_manager import ContextManager
 from core.manifest import generate_manifest
 from core.router import SkillRouter
+from core.session import DEFAULT_SESSION_ID, SessionManager
 from observability.drift_detector import DriftDetector
 from observability.health_aggregator import HealthAggregator
 from observability.metrics_collector import MetricsCollector
 from observability.repair_trigger import RepairTrigger
 from observability.version_audit import VersionAuditLog
 from vault_connector.connector import VaultConnector
-from voice.engines import VoiceOS
+from voice.voice_os import VoiceOS
 
 from .routes import graph, metrics, observability, skills, vault, voice
 
@@ -49,8 +51,9 @@ def create_app(
     app.state.vault = VaultConnector(vault_dir)
     app.state.router = SkillRouter(manifest, repo_root=skills_dir.parent)
     app.state.context_budget = ContextBudget(CONTEXT_TOKEN_BUDGET)
-    app.state.active_skill = None
-    app.state.last_context_package = None
+    app.state.context_manager = ContextManager(app.state.context_budget)
+    app.state.session_manager = SessionManager()
+    app.state.session_manager.get_or_create(DEFAULT_SESSION_ID)
     app.state.voice = VoiceOS()
 
     app.state.metrics_collector = MetricsCollector(observability_db_path, METRICS_RETENTION_DAYS)
@@ -74,6 +77,7 @@ def create_app(
             duration_ms=duration_ms,
             status_code=response.status_code,
         )
+        app.state.session_manager.get_or_create(DEFAULT_SESSION_ID)
         return response
 
     app.include_router(metrics.router, prefix="/api")

@@ -15,6 +15,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 VAULT_DIR = REPO_ROOT / "vault"
 SKILLS_DIR = REPO_ROOT / "skills"
 MANIFEST_PATH = REPO_ROOT / "skills_manifest.json"
+VOICE_PATTERNS_PATH = REPO_ROOT / "config" / "voice_patterns.json"
 
 # Conservative token budget per active-skill context package (see core/context_budget.py).
 CONTEXT_TOKEN_BUDGET = 8000

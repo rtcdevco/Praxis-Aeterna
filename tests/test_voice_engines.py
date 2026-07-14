@@ -1,7 +1,9 @@
 import sys
 import types
 
-from voice.engines import STTEngine, TTSEngine, VoiceOS
+from voice.stt_engine import STTEngine
+from voice.tts_engine import TTSEngine
+from voice.voice_os import VoiceOS
 
 
 def test_stt_unavailable_without_dep():

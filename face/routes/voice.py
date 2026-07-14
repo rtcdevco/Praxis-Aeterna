@@ -1,4 +1,4 @@
-"""Voice status + STT/TTS endpoints, backed by voice.engines.VoiceOS.
+"""Voice status + STT/TTS endpoints, backed by voice.voice_os.VoiceOS.
 
 Both engines report `available: False` when their optional dependency isn't
 installed — every route here degrades to a clear JSON error instead of a

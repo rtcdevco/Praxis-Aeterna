@@ -1,0 +1,7 @@
+{
+  "wake_phrase": "hey fable",
+  "commands": {
+    "productivity": ["add a task", "what's on my list", "mark done", "to-do list"],
+    "research": ["research", "look up", "find sources"]
+  }
+}

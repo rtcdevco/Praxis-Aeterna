@@ -11,7 +11,7 @@ from observability.metrics_collector import MetricsCollector
 from observability.repair_trigger import RepairTrigger
 from observability.version_audit import VersionAuditLog, compute_file_hash, read_version_header
 from vault_connector.connector import VaultConnector
-from voice.engines import VoiceOS
+from voice.voice_os import VoiceOS
 
 
 @pytest.fixture
