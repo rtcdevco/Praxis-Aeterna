@@ -86,6 +86,68 @@ def test_voice_synthesize_without_deps_returns_clear_error(client):
     assert response.json() == {"path": None, "error": "kokoro-onnx not installed"}
 
 
+def test_voice_command_without_deps_returns_clear_error(client):
+    response = client.post(
+        "/api/voice/command",
+        files={"file": ("clip.wav", b"not-real-audio", "audio/wav")},
+    )
+    assert response.status_code == 200
+    assert response.json() == {
+        "transcript": "",
+        "matched_skill": None,
+        "error": "faster-whisper not installed",
+    }
+
+
+def test_voice_listen_without_deps_returns_clear_error(client):
+    response = client.post("/api/voice/listen")
+    assert response.status_code == 200
+    assert response.json() == {
+        "speech_detected": False,
+        "matched_skill": None,
+        "error": "sounddevice not installed",
+    }
+
+
+def test_voice_command_routes_transcript_and_updates_active_skill(client, monkeypatch):
+    import sys
+    import types
+
+    class FakeSegment:
+        text = "add a task"
+        words = []
+
+    class FakeInfo:
+        language = "en"
+
+    class FakeWhisperModel:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def transcribe(self, path, language=None, vad_filter=True, word_timestamps=True):
+            return [FakeSegment()], FakeInfo()
+
+    fake_module = types.ModuleType("faster_whisper")
+    fake_module.WhisperModel = FakeWhisperModel
+    monkeypatch.setitem(sys.modules, "faster_whisper", fake_module)
+
+    from voice.stt_engine import STTEngine
+
+    client.app.state.voice.stt = STTEngine()
+
+    response = client.post(
+        "/api/voice/command",
+        files={"file": ("clip.wav", b"not-real-audio", "audio/wav")},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["transcript"] == "add a task"
+    assert body["matched_skill"] == "productivity"
+
+    metrics = client.get("/api/metrics").json()
+    assert metrics["active_skill"] == "productivity"
+
+
 def test_route_utterance_updates_active_skill_and_metrics(client):
     response = client.post("/api/skills/route", json={"utterance": "add a task"})
     assert response.json() == {"matched_skill": "productivity"}

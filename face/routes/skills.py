@@ -20,7 +20,7 @@ class RouteRequest(BaseModel):
     utterance: str
 
 
-def _load_context_files(skill_md_path: Path) -> list[tuple[str, str]]:
+def load_context_files(skill_md_path: Path) -> list[tuple[str, str]]:
     skill_md_text = skill_md_path.read_text(encoding="utf-8")
     files = []
     for name in parse_context_files(skill_md_text):
@@ -40,7 +40,7 @@ def route_utterance(payload: RouteRequest, request: Request) -> dict:
     if matched is not None:
         skill_md_path = skill_router.skill_md_path(matched)
         skill_md_text = skill_md_path.read_text(encoding="utf-8")
-        context_files = _load_context_files(skill_md_path)
+        context_files = load_context_files(skill_md_path)
         context_manager.assemble(DEFAULT_SESSION_ID, skill_md_text, context_files)
 
     return {"matched_skill": matched}

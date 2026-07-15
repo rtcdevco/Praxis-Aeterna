@@ -17,6 +17,7 @@ from config.settings import (
     REPAIR_CONSECUTIVE_THRESHOLD,
     SKILLS_DIR,
     VAULT_DIR,
+    VOICE_PATTERNS_PATH,
 )
 from core.context_budget import ContextBudget
 from core.context_manager import ContextManager
@@ -29,6 +30,7 @@ from observability.metrics_collector import MetricsCollector
 from observability.repair_trigger import RepairTrigger
 from observability.version_audit import VersionAuditLog
 from vault_connector.connector import VaultConnector
+from voice.intent_router import IntentRouter, load_voice_patterns
 from voice.voice_os import VoiceOS
 
 from .routes import graph, metrics, observability, skills, vault, voice
@@ -54,7 +56,11 @@ def create_app(
     app.state.context_manager = ContextManager(app.state.context_budget)
     app.state.session_manager = SessionManager()
     app.state.session_manager.get_or_create(DEFAULT_SESSION_ID)
-    app.state.voice = VoiceOS()
+    voice_patterns = load_voice_patterns(VOICE_PATTERNS_PATH)
+    intent_router = IntentRouter(
+        app.state.router, wake_phrase=voice_patterns.get("wake_phrase", "hey fable")
+    )
+    app.state.voice = VoiceOS(intent_router=intent_router)
 
     app.state.metrics_collector = MetricsCollector(observability_db_path, METRICS_RETENTION_DAYS)
     app.state.drift_detector = DriftDetector(app.state.metrics_collector, DRIFT_SIGMA_THRESHOLD)

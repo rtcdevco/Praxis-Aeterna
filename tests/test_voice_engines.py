@@ -28,6 +28,62 @@ def test_voice_os_status_reports_unavailable_by_default():
         "tts_available": False,
         "listening": False,
         "voice": "af_bella",
+        "capture_available": False,
+        "playback_available": False,
+    }
+
+
+def test_voice_os_handle_command_empty_transcript_without_stt():
+    voice_os = VoiceOS()
+    result = voice_os.handle_command("some.wav")
+    assert result == {
+        "transcript": "",
+        "wake_word_detected": False,
+        "matched_skill": None,
+        "error": "faster-whisper not installed",
+    }
+
+
+def test_voice_os_handle_command_routes_via_intent_router(monkeypatch, tmp_path):
+    from core.manifest import generate_manifest
+    from core.router import SkillRouter
+    from voice.intent_router import IntentRouter
+
+    skills_dir = tmp_path / "skills"
+    skill_dir = skills_dir / "productivity"
+    skill_dir.mkdir(parents=True)
+    skill_md = (
+        '---\nintent_patterns:\n  - "\\\\btask\\\\b"\nkeywords: [task]\npriority: 0\n---\n# Skill\n'
+    )
+    (skill_dir / "SKILL.md").write_text(skill_md, encoding="utf-8")
+    manifest = generate_manifest(skills_dir, tmp_path / "skills_manifest.json")
+    skill_router = SkillRouter(manifest, repo_root=tmp_path)
+    intent_router = IntentRouter(skill_router, wake_phrase="hey fable")
+
+    class FakeWhisperModel:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def transcribe(self, path, language=None, vad_filter=True, word_timestamps=True):
+            class FakeSegment:
+                text = "hey fable add a task"
+                words = []
+
+            class FakeInfo:
+                language = "en"
+
+            return [FakeSegment()], FakeInfo()
+
+    fake_module = types.ModuleType("faster_whisper")
+    fake_module.WhisperModel = FakeWhisperModel
+    monkeypatch.setitem(sys.modules, "faster_whisper", fake_module)
+
+    voice_os = VoiceOS(intent_router=intent_router)
+    result = voice_os.handle_command("clip.wav")
+    assert result == {
+        "transcript": "hey fable add a task",
+        "wake_word_detected": True,
+        "matched_skill": "productivity",
     }
 
 

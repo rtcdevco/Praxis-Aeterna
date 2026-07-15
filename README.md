@@ -18,11 +18,12 @@ Linear structures it, Fable 5 plans it, Opus-tier agents build it.
 Voice and Handoff are now built, but two things inside them still need a real
 environment to verify, not this sandbox:
 - **Voice**: every module (`stt_engine.py`, `tts_engine.py`, `audio_capture.py`,
-  `audio_playback.py`, `intent_router.py`, `wake_word.py`, `voice_os.py`) and
-  its API wiring are fully unit-tested with mocked STT/TTS/`sounddevice` deps,
-  but installing the real packages, downloading model files, and testing
-  against a real mic/speakers needs real network access and hardware — see
-  `requirements-voice.txt`.
+  `audio_playback.py`, `intent_router.py`, `wake_word.py`, `voice_os.py`) is
+  wired into the running app via `voice_os.py` and the `/api/voice/*` routes —
+  not just unit-tested library code sitting unused beside it. What's still
+  unverified is the real hardware/model side: installing the real packages,
+  downloading model files, and testing against a real mic/speakers needs real
+  network access and hardware — see `requirements-voice.txt`.
 - **Handoff**: `./deploy.sh local` is verified end-to-end (boots the real app,
   serves the dashboard and voice endpoints). The `docker` and `systemd` modes
   are written and match the actual current entrypoint (`face.main:app`), but
@@ -55,8 +56,14 @@ environment to verify, not this sandbox:
   (routes a transcript through the same `SkillRouter` a typed utterance uses,
   plus wake-phrase stripping), `wake_word.py` (wake-phrase detection by
   reusing `STTEngine` rather than a separate proprietary keyword-spotting
-  dependency), and `voice_os.py` (the `VoiceOS` facade the API layer talks
-  to). All hardware-touching pieces (`sounddevice` for capture/playback,
+  dependency), and `voice_os.py` (the `VoiceOS` facade that composes all of
+  the above and is what the API layer talks to). All six modules are wired
+  into the running app — `POST /api/voice/command` (upload a clip → STT →
+  wake-word check → `IntentRouter` → the same `SkillRouter` a typed
+  utterance uses) and `POST /api/voice/listen` (mic capture → VAD gate →
+  the same pipeline → optional spoken confirmation via TTS + playback) are
+  real, reachable endpoints, not just unit-tested library code. All
+  hardware-touching pieces (`sounddevice` for capture/playback,
   `faster-whisper`/`kokoro-onnx` for STT/TTS) are optional at import time —
   see "Voice" below for what's actually verified vs. not.
 - **`deploy/`** — the systemd unit (`fable5.service`) and `scripts/reskin.sh`
