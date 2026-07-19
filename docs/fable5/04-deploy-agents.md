@@ -37,3 +37,13 @@ decided.
 While executing, follow `operating-discipline.md` — it's the OODA-loop discipline
 (reasoning, workflows, prompts, deliverables) for how an agent behaves moment-to-moment
 during this step.
+
+## Operational recipe
+
+For a concrete, runnable version of "delegate sub-tasks to other agents" above —
+parallel Explore agents → a build plan → parallel Implementer agents each in its
+own git worktree → merge → a high-effort Opus review → PR — see the
+`/fable5-deploy` skill (`.claude/skills/fable5-deploy/SKILL.md`). It uses this
+session's actual `Agent` tool (`subagent_type`, `model` overrides,
+`isolation: "worktree"`) to run the pipeline. This doc stays the conceptual
+description; the skill is the runbook.
