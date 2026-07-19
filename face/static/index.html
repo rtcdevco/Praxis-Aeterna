@@ -7,13 +7,14 @@
 </head>
 <body>
   <header class="vault-header">
+    <span class="lambda-sigil">&Lambda;</span>
     <span class="vault-title">V.A.U.L.T.</span>
     <span id="clock" class="vault-clock"></span>
   </header>
 
   <main class="vault-grid">
     <section class="panel" aria-labelledby="metrics-heading">
-      <h2 id="metrics-heading">Metrics</h2>
+      <h2 id="metrics-heading" data-section-number="01">Metrics</h2>
       <dl class="metric-list">
         <div class="metric-row">
           <dt>Vault Nodes</dt>
@@ -39,22 +40,27 @@
     </section>
 
     <section class="panel" aria-labelledby="voice-heading">
-      <h2 id="voice-heading">Voice</h2>
+      <h2 id="voice-heading" data-section-number="02">Voice</h2>
       <p id="voice-state" class="voice-state">state: —</p>
       <p id="voice-stt" class="voice-line">STT: —</p>
       <p id="voice-tts" class="voice-line">TTS: —</p>
     </section>
 
     <section class="panel" aria-labelledby="skills-heading">
-      <h2 id="skills-heading">Skills</h2>
+      <h2 id="skills-heading" data-section-number="03">Skills</h2>
       <ul id="skills-list" class="skills-list"></ul>
     </section>
 
     <section class="panel panel-graph" aria-labelledby="graph-heading">
-      <h2 id="graph-heading">Knowledge Graph</h2>
+      <h2 id="graph-heading" data-section-number="04">Knowledge Graph</h2>
       <svg id="graph-svg" width="100%" height="360"></svg>
     </section>
   </main>
+
+  <footer class="vault-footer">
+    <div class="vault-footer-logo">N&Lambda;CIO</div>
+    <div class="vault-footer-tagline">Fable 5 OS &middot; V.A.U.L.T. Dashboard</div>
+  </footer>
 
   <script src="/js/d3.min.js"></script>
   <script src="/js/graph.js"></script>
