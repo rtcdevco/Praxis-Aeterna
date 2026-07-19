@@ -17,17 +17,21 @@ from config.settings import (
     REPAIR_CONSECUTIVE_THRESHOLD,
     SKILLS_DIR,
     VAULT_DIR,
+    VOICE_PATTERNS_PATH,
 )
 from core.context_budget import ContextBudget
+from core.context_manager import ContextManager
 from core.manifest import generate_manifest
 from core.router import SkillRouter
+from core.session import DEFAULT_SESSION_ID, SessionManager
 from observability.drift_detector import DriftDetector
 from observability.health_aggregator import HealthAggregator
 from observability.metrics_collector import MetricsCollector
 from observability.repair_trigger import RepairTrigger
 from observability.version_audit import VersionAuditLog
 from vault_connector.connector import VaultConnector
-from voice.engines import VoiceOS
+from voice.intent_router import IntentRouter, load_voice_patterns
+from voice.voice_os import VoiceOS
 
 from .routes import graph, metrics, observability, skills, vault, voice
 
@@ -49,9 +53,14 @@ def create_app(
     app.state.vault = VaultConnector(vault_dir)
     app.state.router = SkillRouter(manifest, repo_root=skills_dir.parent)
     app.state.context_budget = ContextBudget(CONTEXT_TOKEN_BUDGET)
-    app.state.active_skill = None
-    app.state.last_context_package = None
-    app.state.voice = VoiceOS()
+    app.state.context_manager = ContextManager(app.state.context_budget)
+    app.state.session_manager = SessionManager()
+    app.state.session_manager.get_or_create(DEFAULT_SESSION_ID)
+    voice_patterns = load_voice_patterns(VOICE_PATTERNS_PATH)
+    intent_router = IntentRouter(
+        app.state.router, wake_phrase=voice_patterns.get("wake_phrase", "hey fable")
+    )
+    app.state.voice = VoiceOS(intent_router=intent_router)
 
     app.state.metrics_collector = MetricsCollector(observability_db_path, METRICS_RETENTION_DAYS)
     app.state.drift_detector = DriftDetector(app.state.metrics_collector, DRIFT_SIGMA_THRESHOLD)
@@ -74,6 +83,7 @@ def create_app(
             duration_ms=duration_ms,
             status_code=response.status_code,
         )
+        app.state.session_manager.get_or_create(DEFAULT_SESSION_ID)
         return response
 
     app.include_router(metrics.router, prefix="/api")

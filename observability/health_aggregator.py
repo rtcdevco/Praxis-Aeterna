@@ -1,5 +1,5 @@
-# version: 1
-# changed: 2026-07-09 | Claude | initial implementation
+# version: 2
+# changed: 2026-07-11 | Claude | update VoiceOS import path (voice.engines -> voice.voice_os)
 """Composite health score across the five pillars.
 
 Adapted from the original spec's "poll all existing services": this app is a
@@ -18,7 +18,7 @@ from pathlib import Path
 
 from core.router import SkillRouter
 from vault_connector.connector import VaultConnector
-from voice.engines import VoiceOS
+from voice.voice_os import VoiceOS
 
 
 @dataclass

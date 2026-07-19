@@ -12,7 +12,7 @@ from fastapi.responses import PlainTextResponse
 
 from core.manifest import generate_manifest
 from core.router import SkillRouter
-from voice.engines import VoiceOS
+from voice.voice_os import VoiceOS
 
 router = APIRouter()
 

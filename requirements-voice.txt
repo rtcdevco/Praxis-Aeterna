@@ -1,6 +1,7 @@
 # Optional voice deps — install with: pip install -r requirements-voice.txt
-# Not part of requirements.txt so the base install stays lightweight; voice/engines.py
-# imports these lazily and reports "unavailable" gracefully if they're missing.
+# Not part of requirements.txt so the base install stays lightweight; the voice/
+# modules import these lazily and report "unavailable" gracefully if missing.
 faster-whisper==1.1.0
 kokoro-onnx==0.3.9
 soundfile==0.12.1
+sounddevice==0.5.1
