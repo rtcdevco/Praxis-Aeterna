@@ -18,6 +18,10 @@ def list_skills(request: Request) -> dict:
 
 class RouteRequest(BaseModel):
     utterance: str
+    # JSON body field here (this route has no file upload competing for the
+    # body). The voice routes in voice.py take session_id as a query param
+    # instead, since they already consume the body for an UploadFile — sending
+    # session_id in a JSON/form body there is silently ignored, not an error.
     session_id: str = DEFAULT_SESSION_ID
 
 

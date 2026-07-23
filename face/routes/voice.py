@@ -90,6 +90,11 @@ async def voice_command(
     """Transcribe an uploaded audio clip and route it exactly like a typed
     utterance — the real entry point for `IntentRouter`/`WakeWordDetector`,
     which previously had no caller anywhere in the app.
+
+    `session_id` is a query param, not a body/form field — the body here is
+    already the multipart file upload. Unlike `/skills/route`, this is the
+    only place `session_id` can go; a JSON or form field named `session_id`
+    sent alongside `file` is silently dropped, not rejected.
     """
     voice_os = request.app.state.voice
     if not voice_os.stt.available:
@@ -114,6 +119,10 @@ def listen(
     `AudioCapture`/`AudioPlayback`; degrades to a clear "unavailable" result
     in any environment without a mic/speakers, same pattern as the rest of
     the voice pillar.
+
+    `session_id` is a query param, same as `duration_seconds` — see
+    `/voice/command`'s docstring for why the voice routes use query params
+    instead of `/skills/route`'s JSON body field.
     """
     voice_os = request.app.state.voice
     capture = voice_os.capture

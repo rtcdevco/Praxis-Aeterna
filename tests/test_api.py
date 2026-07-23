@@ -231,6 +231,59 @@ def test_voice_command_with_explicit_session_id_is_isolated(client, monkeypatch)
     assert default_metrics["active_skill"] is None
 
 
+def test_voice_listen_with_explicit_session_id_is_isolated(client, monkeypatch):
+    import sys
+    import types
+
+    class FakeSegment:
+        text = "add a task"
+        words = []
+
+    class FakeInfo:
+        language = "en"
+
+    class FakeWhisperModel:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def transcribe(self, path, language=None, vad_filter=True, word_timestamps=True):
+            return [FakeSegment()], FakeInfo()
+
+    fake_module = types.ModuleType("faster_whisper")
+    fake_module.WhisperModel = FakeWhisperModel
+    monkeypatch.setitem(sys.modules, "faster_whisper", fake_module)
+
+    from voice.stt_engine import STTEngine
+
+    class FakeCapture:
+        available = True
+
+        def record(self, duration_seconds):
+            return {"samples": [0.5, -0.5, 0.5], "sample_rate": 16000}
+
+        def is_speech(self, samples):
+            return True
+
+    fake_sf_module = types.ModuleType("soundfile")
+    fake_sf_module.write = lambda path, samples, sample_rate: None
+    monkeypatch.setitem(sys.modules, "soundfile", fake_sf_module)
+
+    client.app.state.voice.stt = STTEngine()
+    client.app.state.voice.capture = FakeCapture()
+
+    response = client.post("/api/voice/listen", params={"session_id": "session-c"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["speech_detected"] is True
+    assert body["matched_skill"] == "productivity"
+
+    scoped_metrics = client.get("/api/metrics", params={"session_id": "session-c"}).json()
+    assert scoped_metrics["active_skill"] == "productivity"
+
+    default_metrics = client.get("/api/metrics").json()
+    assert default_metrics["active_skill"] is None
+
+
 def test_save_note_then_appears_in_metrics_and_search(client):
     save_response = client.post(
         "/api/vault/note",
