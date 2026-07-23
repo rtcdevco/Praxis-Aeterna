@@ -21,7 +21,9 @@ from .skills import load_context_files
 router = APIRouter()
 
 
-def _set_active_skill(request: Request, matched_skill: str | None) -> None:
+def _set_active_skill(
+    request: Request, matched_skill: str | None, session_id: str = DEFAULT_SESSION_ID
+) -> None:
     """Same context-manager update `/skills/route` does for a typed
     utterance, applied to a skill matched from a voice transcript so both
     entry points leave the session in the same state.
@@ -30,11 +32,11 @@ def _set_active_skill(request: Request, matched_skill: str | None) -> None:
         return
     context_manager = request.app.state.context_manager
     skill_router = request.app.state.router
-    context_manager.set_active_skill(DEFAULT_SESSION_ID, matched_skill)
+    context_manager.set_active_skill(session_id, matched_skill)
     skill_md_path = skill_router.skill_md_path(matched_skill)
     skill_md_text = skill_md_path.read_text(encoding="utf-8")
     context_manager.assemble(
-        DEFAULT_SESSION_ID, skill_md_text, load_context_files(skill_md_path)
+        session_id, skill_md_text, load_context_files(skill_md_path)
     )
 
 
@@ -82,7 +84,9 @@ def synthesize(payload: SynthesizeRequest, request: Request):
 
 
 @router.post("/voice/command")
-async def voice_command(request: Request, file: UploadFile) -> dict:
+async def voice_command(
+    request: Request, file: UploadFile, session_id: str = DEFAULT_SESSION_ID
+) -> dict:
     """Transcribe an uploaded audio clip and route it exactly like a typed
     utterance — the real entry point for `IntentRouter`/`WakeWordDetector`,
     which previously had no caller anywhere in the app.
@@ -97,12 +101,14 @@ async def voice_command(request: Request, file: UploadFile) -> dict:
         tmp_path = tmp.name
 
     result = voice_os.handle_command(tmp_path)
-    _set_active_skill(request, result.get("matched_skill"))
+    _set_active_skill(request, result.get("matched_skill"), session_id)
     return result
 
 
 @router.post("/voice/listen")
-def listen(request: Request, duration_seconds: float = 3.0) -> dict:
+def listen(
+    request: Request, duration_seconds: float = 3.0, session_id: str = DEFAULT_SESSION_ID
+) -> dict:
     """Capture a short clip from the mic, VAD-gate it, and route it through
     the same command pipeline as `/voice/command`. The real entry point for
     `AudioCapture`/`AudioPlayback`; degrades to a clear "unavailable" result
@@ -139,7 +145,7 @@ def listen(request: Request, duration_seconds: float = 3.0) -> dict:
 
     result = voice_os.handle_command(clip_path)
     result["speech_detected"] = True
-    _set_active_skill(request, result.get("matched_skill"))
+    _set_active_skill(request, result.get("matched_skill"), session_id)
 
     if result.get("matched_skill") and voice_os.tts.available and voice_os.playback.available:
         synth = voice_os.tts.synthesize(f"Routed to {result['matched_skill']}")
