@@ -18,6 +18,7 @@ def list_skills(request: Request) -> dict:
 
 class RouteRequest(BaseModel):
     utterance: str
+    session_id: str = DEFAULT_SESSION_ID
 
 
 def load_context_files(skill_md_path: Path) -> list[tuple[str, str]]:
@@ -35,12 +36,12 @@ def route_utterance(payload: RouteRequest, request: Request) -> dict:
     skill_router = request.app.state.router
     context_manager = request.app.state.context_manager
     matched = skill_router.route(payload.utterance)
-    context_manager.set_active_skill(DEFAULT_SESSION_ID, matched)
+    context_manager.set_active_skill(payload.session_id, matched)
 
     if matched is not None:
         skill_md_path = skill_router.skill_md_path(matched)
         skill_md_text = skill_md_path.read_text(encoding="utf-8")
         context_files = load_context_files(skill_md_path)
-        context_manager.assemble(DEFAULT_SESSION_ID, skill_md_text, context_files)
+        context_manager.assemble(payload.session_id, skill_md_text, context_files)
 
     return {"matched_skill": matched}
