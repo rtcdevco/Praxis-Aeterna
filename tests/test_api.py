@@ -162,6 +162,75 @@ def test_route_utterance_no_match(client):
     assert response.json() == {"matched_skill": None}
 
 
+def test_route_utterance_with_explicit_session_id_is_isolated(client):
+    response = client.post(
+        "/api/skills/route",
+        json={"utterance": "add a task", "session_id": "session-a"},
+    )
+    assert response.json() == {"matched_skill": "productivity"}
+
+    scoped_metrics = client.get("/api/metrics", params={"session_id": "session-a"}).json()
+    assert scoped_metrics["active_skill"] == "productivity"
+
+    default_metrics = client.get("/api/metrics").json()
+    assert default_metrics["active_skill"] is None
+
+
+def test_route_utterance_explicit_default_session_id_matches_omitted(client):
+    response = client.post(
+        "/api/skills/route",
+        json={"utterance": "add a task", "session_id": "default"},
+    )
+    assert response.json() == {"matched_skill": "productivity"}
+
+    metrics = client.get("/api/metrics", params={"session_id": "default"}).json()
+    assert metrics["active_skill"] == "productivity"
+
+    omitted_metrics = client.get("/api/metrics").json()
+    assert omitted_metrics["active_skill"] == "productivity"
+
+
+def test_voice_command_with_explicit_session_id_is_isolated(client, monkeypatch):
+    import sys
+    import types
+
+    class FakeSegment:
+        text = "add a task"
+        words = []
+
+    class FakeInfo:
+        language = "en"
+
+    class FakeWhisperModel:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def transcribe(self, path, language=None, vad_filter=True, word_timestamps=True):
+            return [FakeSegment()], FakeInfo()
+
+    fake_module = types.ModuleType("faster_whisper")
+    fake_module.WhisperModel = FakeWhisperModel
+    monkeypatch.setitem(sys.modules, "faster_whisper", fake_module)
+
+    from voice.stt_engine import STTEngine
+
+    client.app.state.voice.stt = STTEngine()
+
+    response = client.post(
+        "/api/voice/command",
+        params={"session_id": "session-b"},
+        files={"file": ("clip.wav", b"not-real-audio", "audio/wav")},
+    )
+    assert response.status_code == 200
+    assert response.json()["matched_skill"] == "productivity"
+
+    scoped_metrics = client.get("/api/metrics", params={"session_id": "session-b"}).json()
+    assert scoped_metrics["active_skill"] == "productivity"
+
+    default_metrics = client.get("/api/metrics").json()
+    assert default_metrics["active_skill"] is None
+
+
 def test_save_note_then_appears_in_metrics_and_search(client):
     save_response = client.post(
         "/api/vault/note",
