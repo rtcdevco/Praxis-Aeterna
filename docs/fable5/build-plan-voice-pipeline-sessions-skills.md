@@ -45,6 +45,7 @@ where it diverges.
   unchanged) while giving future multi-session work a real foundation instead of
   a globals-based one. Extending routes to accept a real session identifier is
   the natural next step if multi-session support is ever actually needed.
+  **Update (2026-07-23): this has since been done** — see the Addendum at the end of this document.
 
 ## File structure (additions/changes only)
 
@@ -112,5 +113,17 @@ config/voice_patterns.json   # new
 - Real audio hardware verification (mic capture, speaker playback, wake-word
   latency) — same limitation as the Voice/Handoff pass; this sandbox has no audio
   hardware.
-- Exposing session IDs through the API so multiple real sessions can be used
-  concurrently — the primitives exist, but no route accepts one yet.
+- ~~Exposing session IDs through the API so multiple real sessions can be
+  used concurrently — the primitives exist, but no route accepts one yet.~~
+  Closed 2026-07-23 — see the Addendum below.
+
+## Addendum (2026-07-23) — session_id exposed through the API
+
+`/api/skills/route` (JSON body field), `/api/metrics`, `/api/voice/command`,
+and `/api/voice/listen` (query param on all three) now accept an optional
+`session_id`, defaulting to `core.session.DEFAULT_SESSION_ID`. No response
+shape changed and no existing route contract changed — every pre-existing
+test in `tests/test_api.py` still passes unmodified, since omitting
+`session_id` reproduces exactly the old hardcoded-`DEFAULT_SESSION_ID`
+behavior. `core/session.py` and `core/context_manager.py` needed no changes;
+they already supported arbitrary session ids, per the original note above.

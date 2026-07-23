@@ -35,8 +35,11 @@ environment to verify, not this sandbox:
 - **`core/`** — skill discovery + manifest generation, a two-phase
   (regex-then-keyword) intent router, a token-budget-aware context assembler,
   and per-session tracking (`session.py` for lifecycle, `context_manager.py`
-  for active-skill/context-package state) — currently backing one implicit
-  "default" session, but the primitives support more.
+  for active-skill/context-package state) — exposed through the API via an
+  optional `session_id` on `/api/skills/route`, `/api/metrics`,
+  `/api/voice/command`, and `/api/voice/listen`. Every route defaults to a
+  single `"default"` session when `session_id` is omitted, so existing
+  single-session callers (including the bundled dashboard) are unaffected.
 - **`vault_connector/`** — reads/writes the `vault/` directory (plain Markdown
   + `[[wikilinks]]`, no database): scanning, saving notes, scored search, a
   wikilink knowledge graph, and daily-note templating.

@@ -8,14 +8,14 @@ router = APIRouter()
 
 
 @router.get("/metrics")
-def get_metrics(request: Request) -> dict:
+def get_metrics(request: Request, session_id: str = DEFAULT_SESSION_ID) -> dict:
     vault = request.app.state.vault
     index = vault.scan_vault()
     graph_data = vault.get_graph_data()
     daily_notes = sum(1 for path in index.notes if path.startswith("01-daily/"))
 
     context_manager = request.app.state.context_manager
-    package = context_manager.get_last_context_package(DEFAULT_SESSION_ID)
+    package = context_manager.get_last_context_package(session_id)
 
     return {
         "vault_nodes": index.node_count,
@@ -26,5 +26,5 @@ def get_metrics(request: Request) -> dict:
             "budget_tokens": context_manager.budget.max_tokens,
             "ratio": package.usage_ratio if package else 0.0,
         },
-        "active_skill": context_manager.get_active_skill(DEFAULT_SESSION_ID),
+        "active_skill": context_manager.get_active_skill(session_id),
     }
